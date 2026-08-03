@@ -1,0 +1,63 @@
+:root {
+  --background: #fff8f6;
+  --foreground: #1c1917;
+  --glow-rose: #fb7185;
+  --glow-blush: #ffe4e6;
+  --glow-pearl: #fff1f2;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: var(--foreground);
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, #ffe4e6 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, #fef3c7 0%, transparent 45%),
+    linear-gradient(180deg, #fff8f6 0%, #fffaf8 40%, #faf7f5 100%);
+  min-height: 100vh;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, "Times New Roman", serif;
+}
+
+.prose-glow {
+  color: #57534e;
+  line-height: 1.7;
+}
+
+.prose-glow p {
+  margin-bottom: 0.9rem;
+}
+
+.prose-glow ul {
+  margin: 0.75rem 0 1rem;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+
+.prose-glow strong {
+  color: #292524;
+  font-weight: 600;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise {
+  animation: rise 0.7s ease-out both;
+}
+
+.animate-rise-delay {
+  animation: rise 0.8s ease-out 0.12s both;
+}
