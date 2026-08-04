@@ -12,14 +12,15 @@ export function ProductCard({ product }: { product: NormalizedProduct }) {
       href={`/products/${product.handle}`}
       className="group flex flex-col gap-3"
     >
-      <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-rose-50 via-white to-amber-50">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-br from-rose-50 via-white to-amber-50">
         {image ? (
           <Image
             src={image}
             alt={product.title}
-            fill
+            width={800}
+            height={1000}
             sizes="(max-width: 768px) 50vw, 25vw"
-            className="object-cover transition duration-500 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-stone-400">

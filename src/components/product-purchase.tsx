@@ -12,12 +12,14 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
   const [variantId, setVariantId] = useState(product.variants[0]?.id);
   const [qty, setQty] = useState(1);
   const [busy, setBusy] = useState<"cart" | "buy" | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const variant =
     product.variants.find((v) => v.id === variantId) || product.variants[0];
   const image =
-    product.images.find((img) => img.id === (variant as { image_id?: number })?.image_id)
-      ?.src ||
+    product.images.find(
+      (img) => img.id === (variant as { image_id?: number })?.image_id,
+    )?.src ||
     product.image?.src ||
     product.images[0]?.src ||
     null;
@@ -36,6 +38,7 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
 
   async function buyNow() {
     setBusy("buy");
+    setError(null);
     try {
       addItem(payload, qty);
       const res = await fetch("/api/checkout", {
@@ -49,11 +52,11 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
       if (!res.ok || !data.url) {
         throw new Error(data.error || "Checkout failed");
       }
-      window.location.href = data.url as string;
+      window.location.assign(data.url as string);
     } catch (e) {
       console.error(e);
+      setError(e instanceof Error ? e.message : "Checkout failed");
       setBusy(null);
-      alert("Could not open Shopify checkout. Please try again.");
     }
   }
 
@@ -65,7 +68,7 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative z-10 space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.2em] text-rose-400">
           {product.product_type || "Beauty device"}
@@ -127,6 +130,8 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
         </button>
       </div>
 
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
       <p className="text-xs leading-relaxed text-stone-500">
         Payment and shipping are completed on glowdevice.shop Shopify checkout.
         Your cart is handed off with the same products and quantities.
@@ -146,22 +151,23 @@ export function ProductGallery({ product }: { product: NormalizedProduct }) {
 
   if (!current) {
     return (
-      <div className="aspect-[4/5] bg-rose-50 text-stone-400 flex items-center justify-center">
+      <div className="flex aspect-[4/5] items-center justify-center bg-rose-50 text-stone-400">
         No image
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div className="relative aspect-[4/5] overflow-hidden bg-gradient-to-br from-rose-50 via-white to-amber-50">
+    <div className="relative z-0 space-y-3">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-br from-rose-50 via-white to-amber-50">
         <Image
           src={current.src}
           alt={current.alt || product.title}
-          fill
+          width={current.width || 1000}
+          height={current.height || 1250}
           priority
           sizes="(max-width: 768px) 100vw, 50vw"
-          className="object-cover"
+          className="h-full w-full object-cover"
         />
       </div>
       {images.length > 1 ? (
@@ -178,9 +184,10 @@ export function ProductGallery({ product }: { product: NormalizedProduct }) {
               <Image
                 src={img.src}
                 alt=""
-                fill
+                width={img.width || 200}
+                height={img.height || 200}
                 sizes="80px"
-                className="object-cover"
+                className="h-full w-full object-cover"
               />
             </button>
           ))}

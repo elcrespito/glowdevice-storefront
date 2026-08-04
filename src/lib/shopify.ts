@@ -118,6 +118,7 @@ export function buildCartPermalink(lines: CheckoutLine[]): string {
     "attributes[mirror_url]": STOREFRONT_PUBLIC_URL,
   });
 
+  // Cart permalink — Shopify redirects into checkout automatically.
   return `${STORE_BASE_URL}/cart/${path}?${params.toString()}`;
 }
 

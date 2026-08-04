@@ -68,9 +68,10 @@ export function CartView() {
                   <Image
                     src={item.image}
                     alt={item.title}
-                    fill
+                    width={80}
+                    height={96}
                     sizes="80px"
-                    className="object-cover"
+                    className="h-full w-full object-cover"
                   />
                 ) : null}
               </div>
