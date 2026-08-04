@@ -2,41 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useCart } from "@/lib/cart";
+import { buildGoCheckoutHref } from "@/lib/checkout-params";
 import { formatMoney } from "@/lib/shopify";
 
 export function CartView() {
   const { items, subtotal, setQuantity, removeItem, ready, clear } = useCart();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function checkout() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lines: items.map((i) => ({
-            variantId: i.variantId,
-            quantity: i.quantity,
-          })),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || "Checkout failed");
-      }
-      // Clear local mirror cart once we hand off to Shopify
-      clear();
-      window.location.href = data.url as string;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Checkout failed");
-      setLoading(false);
-    }
-  }
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
 
   if (!ready) {
     return <p className="text-stone-500">Loading cart…</p>;
@@ -46,6 +20,9 @@ export function CartView() {
     return (
       <div className="space-y-4 py-10 text-center">
         <h1 className="font-display text-4xl text-stone-900">Your cart is empty</h1>
+        {error === "checkout_failed" ? (
+          <p className="text-sm text-red-600">Checkout failed. Try again.</p>
+        ) : null}
         <Link
           href="/#collection"
           className="inline-block border border-stone-900 bg-stone-900 px-6 py-3 text-sm uppercase tracking-[0.14em] text-white"
@@ -55,6 +32,10 @@ export function CartView() {
       </div>
     );
   }
+
+  const goHref = buildGoCheckoutHref(
+    items.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+  );
 
   return (
     <div className="grid gap-10 lg:grid-cols-[1.4fr_0.8fr]">
@@ -122,15 +103,17 @@ export function CartView() {
           Taxes and shipping are calculated on glowdevice.shop during the final
           Shopify checkout step.
         </p>
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button
-          type="button"
-          onClick={checkout}
-          disabled={loading}
-          className="w-full bg-stone-900 px-6 py-3.5 text-sm font-medium uppercase tracking-[0.14em] text-white transition hover:bg-stone-800 disabled:opacity-60"
+        {error === "checkout_failed" ? (
+          <p className="text-sm text-red-600">Checkout failed. Try again.</p>
+        ) : null}
+        <a
+          href={goHref}
+          onClick={() => clear()}
+          className="block w-full bg-stone-900 px-6 py-3.5 text-center text-sm font-medium uppercase tracking-[0.14em] text-white transition hover:bg-stone-800"
         >
-          {loading ? "Opening Glow checkout…" : "Checkout on glowdevice.shop"}
-        </button>
+          Checkout on glowdevice.shop
+        </a>
+        <p className="break-all text-[11px] text-stone-400">GET {goHref}</p>
       </aside>
     </div>
   );

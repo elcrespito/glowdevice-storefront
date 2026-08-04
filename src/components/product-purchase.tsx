@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart";
+import { buildGoCheckoutHref } from "@/lib/checkout-params";
 import { formatMoney, type NormalizedProduct } from "@/lib/shopify";
 
 export function ProductPurchase({ product }: { product: NormalizedProduct }) {
@@ -36,28 +37,14 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
     price: variant.price,
   };
 
-  async function buyNow() {
+  function buyNow() {
     setBusy("buy");
     setError(null);
-    try {
-      addItem(payload, qty);
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lines: [{ variantId: variant.id, quantity: qty }],
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        throw new Error(data.error || "Checkout failed");
-      }
-      window.location.assign(data.url as string);
-    } catch (e) {
-      console.error(e);
-      setError(e instanceof Error ? e.message : "Checkout failed");
-      setBusy(null);
-    }
+    addItem(payload, qty);
+    // Pure GET hop — no POST/fetch
+    window.location.assign(
+      buildGoCheckoutHref([{ variantId: variant.id, quantity: qty }]),
+    );
   }
 
   function addToCart() {

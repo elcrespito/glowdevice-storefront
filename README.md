@@ -2,13 +2,27 @@
 
 Mirror storefront for [glowdevice.shop](https://glowdevice.shop/). Catalog is pulled live from Shopify (`/products.json`). Checkout always finishes on glowdevice Shopify checkout.
 
-## Flow
+## Flow (GET everywhere)
 
 1. Browse identical products (handles, titles, prices, images from glowdevice).
-2. Add to local cart.
-3. **Checkout** → `POST /api/checkout` → redirect to glowdevice:
-   - Prefer **Storefront API** `cartCreate` → `checkoutUrl` when `SHOPIFY_STOREFRONT_TOKEN` is set
-   - Fallback: Shopify **cart permalink** `/cart/{variantId}:{qty}`
+2. Add to local cart, or land with query params.
+3. Checkout is a pure GET hop:
+
+```
+GET /cart?lines=VARIANT:QTY,VARIANT:QTY   → seed cart on our site
+GET /go?lines=VARIANT:QTY                 → 302 → Shopify checkout
+```
+
+Examples:
+
+- Land + see cart: `https://YOUR_HOST/cart?lines=58086705103231:1`
+- Straight to Shopify: `https://YOUR_HOST/go?lines=58086705103231:1`
+
+Shopify side:
+- Prefer **Storefront API** `cartCreate` → `checkoutUrl` when `SHOPIFY_STOREFRONT_TOKEN` is set
+- Fallback: cart permalink `/cart/{variantId}:{qty}`
+
+No encryption on `lines` for now — Shopify owns price; spoofing qty/variant only changes what the buyer pays for.
 
 ## Setup
 
