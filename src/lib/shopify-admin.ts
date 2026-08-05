@@ -148,6 +148,26 @@ export async function fetchShopJson(
   return { status: res.status, body };
 }
 
+/** Shopify rejects disposable/fake domains (e.g. wewe@ewwe.we). Omit bad emails. */
+function shopifySafeEmail(email: string | null | undefined): string | undefined {
+  if (!email) return undefined;
+  const trimmed = email.trim().toLowerCase();
+  // basic shape: local@domain.tld with tld length >= 2
+  const m = trimmed.match(
+    /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+)$/i,
+  );
+  if (!m) return undefined;
+  const domain = m[1];
+  const tld = domain.split(".").pop() || "";
+  // Shopify domain validation is stricter than regex — skip obvious test junk
+  if (tld.length < 2) return undefined;
+  if (/^(we|test|example|invalid|localhost)$/i.test(tld)) return undefined;
+  if (/^(example\.com|example\.org|test\.com|localhost)$/i.test(domain)) {
+    return undefined;
+  }
+  return trimmed;
+}
+
 export async function createDraftOrderFromHandoff(
   payload: HandoffPayload,
 ): Promise<{ id: string; invoiceUrl: string }> {
@@ -163,26 +183,30 @@ export async function createDraftOrderFromHandoff(
     taxable: false,
   }));
 
-  const body = {
-    draft_order: {
-      line_items: lineItems,
-      currency: payload.currency,
-      email: payload.email || undefined,
-      note_attributes: [
-        { name: "internal_order_id", value: payload.orderId },
-        { name: "internal_ref", value: payload.ref },
-        { name: "source", value: "peptides-handoff" },
-      ],
-      note: "Wellness order — fulfilment handled internally.",
-      shipping_line: null,
-      use_customer_default_address: false,
-      tags: "peptides-handoff,wellness",
-    },
-  };
+  const safeEmail = shopifySafeEmail(payload.email);
 
-  const res = await fetch(
-    `https://${shop}/admin/api/${API_VERSION}/draft_orders.json`,
-    {
+  async function postDraft(email?: string) {
+    const body = {
+      draft_order: {
+        line_items: lineItems,
+        currency: payload.currency,
+        ...(email ? { email } : {}),
+        note_attributes: [
+          { name: "internal_order_id", value: payload.orderId },
+          { name: "internal_ref", value: payload.ref },
+          { name: "source", value: "peptides-handoff" },
+          ...(payload.email
+            ? [{ name: "customer_email_raw", value: String(payload.email) }]
+            : []),
+        ],
+        note: "Wellness order — fulfilment handled internally.",
+        shipping_line: null,
+        use_customer_default_address: false,
+        tags: "peptides-handoff,wellness",
+      },
+    };
+
+    return fetch(`https://${shop}/admin/api/${API_VERSION}/draft_orders.json`, {
       method: "POST",
       headers: {
         "X-Shopify-Access-Token": accessToken,
@@ -191,17 +215,38 @@ export async function createDraftOrderFromHandoff(
       },
       body: JSON.stringify(body),
       cache: "no-store",
-    },
-  );
+    });
+  }
+
+  let res = await postDraft(safeEmail);
+  let text = await res.text().catch(() => "");
+
+  // Retry once without email if Shopify rejects the domain
+  if (
+    !res.ok &&
+    res.status === 422 &&
+    safeEmail &&
+    /email/i.test(text) &&
+    /invalid domain/i.test(text)
+  ) {
+    console.warn(
+      "[shopify-admin] email rejected by Shopify, retrying without email",
+      safeEmail,
+    );
+    res = await postDraft(undefined);
+    text = await res.text().catch(() => "");
+  }
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
     throw new Error(`Shopify draft_order failed ${res.status}: ${text.slice(0, 500)}`);
   }
 
-  const json = (await res.json()) as {
-    draft_order?: { id: number; invoice_url: string };
-  };
+  let json: { draft_order?: { id: number; invoice_url: string } };
+  try {
+    json = JSON.parse(text) as typeof json;
+  } catch {
+    throw new Error(`Shopify draft_order bad JSON: ${text.slice(0, 300)}`);
+  }
 
   const draft = json.draft_order;
   if (!draft?.id || !draft.invoice_url) {
