@@ -29,7 +29,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         error: "shopify_unconfigured",
-        message: "Set SHOPIFY_SHOP_DOMAIN and SHOPIFY_ADMIN_TOKEN on middle app",
+        message:
+          "Set SHOPIFY_SHOP_DOMAIN and SHOPIFY_CLIENT_ID + SHOPIFY_CLIENT_SECRET (or legacy SHOPIFY_ADMIN_TOKEN)",
       },
       { status: 503 },
     );
