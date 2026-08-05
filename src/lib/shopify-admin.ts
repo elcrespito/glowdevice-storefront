@@ -1,4 +1,4 @@
-import type { HandoffLine, HandoffPayload } from "./handoff";
+import type { HandoffPayload } from "./handoff";
 import { STORE_BASE_URL, STORE_DOMAIN } from "./config";
 
 /**
