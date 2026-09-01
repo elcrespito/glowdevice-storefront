@@ -5,7 +5,6 @@ import {
   ProductPurchase,
 } from "@/components/product-purchase";
 import {
-  fetchCatalog,
   fetchProductByHandle,
   stripHtml,
 } from "@/lib/shopify";
