@@ -2,7 +2,7 @@
  * Integration smoke: client_credentials → GET /admin/api/2026-07/shop.json === 200
  *
  * Usage:
- *   SHOPIFY_SHOP_DOMAIN=glowdevice.myshopify.com \
+ *   SHOPIFY_SHOP_DOMAIN=pawandmeow.myshopify.com \
  *   SHOPIFY_CLIENT_ID=... SHOPIFY_CLIENT_SECRET=... \
  *   node --import tsx scripts/shopify-auth-smoke.ts
  *
