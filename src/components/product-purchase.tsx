@@ -120,7 +120,7 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <p className="text-xs leading-relaxed text-stone-500">
-        Payment and shipping are completed on glowdevice.shop Shopify checkout.
+        Payment and shipping are completed on pawandmeow.myshopify.com Shopify checkout.
         Your cart is handed off with the same products and quantities.
       </p>
     </div>

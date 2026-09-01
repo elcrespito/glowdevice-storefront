@@ -51,12 +51,12 @@ export function SiteFooter() {
         <p>
           Secure checkout on{" "}
           <a
-            href="https://glowdevice.shop"
+            href="https://pawandmeow.myshopify.com"
             className="underline decoration-rose-300 underline-offset-4 hover:text-stone-800"
             target="_blank"
             rel="noreferrer"
           >
-            glowdevice.shop
+            pawandmeow.myshopify.com
           </a>
         </p>
       </div>

@@ -2,7 +2,7 @@ export const STORE_DOMAIN =
   process.env.SHOPIFY_STORE_DOMAIN?.replace(/^https?:\/\//, "").replace(
     /\/$/,
     "",
-  ) || "glowdevice.shop";
+  ) || "pawandmeow.myshopify.com";
 
 export const STORE_BASE_URL = `https://${STORE_DOMAIN}`;
 
@@ -15,8 +15,8 @@ export const STOREFRONT_PUBLIC_URL =
   process.env.NEXT_PUBLIC_STOREFRONT_URL || "http://localhost:3000";
 
 export const BRAND = {
-  name: "Glow Device",
-  tagline: "Glow Beyond Beauty",
+  name: "Paw & Meow",
+  tagline: "Premium Pet Care",
   description:
-    "LED light therapy, EMS sculpting, and at-home beauty devices curated for radiant skin.",
+    "Curated selection of premium products for your beloved pets.",
 } as const;

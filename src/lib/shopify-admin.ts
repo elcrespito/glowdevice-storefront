@@ -240,7 +240,7 @@ function shopifySafeEmail(email: string | null | undefined): string | undefined 
 }
 
 /**
- * Build draft line items in the Shopify shop currency with glowdevice catalog titles.
+ * Build draft line items in the Shopify shop currency with storefront catalog titles.
  * Keeps paid amount equal to handoff total (products + shipping gap).
  */
 async function buildStorefrontLineItems(payload: HandoffPayload): Promise<{

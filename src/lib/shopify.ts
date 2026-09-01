@@ -103,7 +103,7 @@ export type CheckoutLine = {
   quantity: number;
 };
 
-/** Shopify cart permalink — no API token required. Ends on glowdevice checkout. */
+/** Shopify cart permalink — no API token required. Ends on Shopify checkout. */
 export function buildCartPermalink(lines: CheckoutLine[]): string {
   if (!lines.length) {
     throw new Error("Cart is empty");
@@ -114,7 +114,7 @@ export function buildCartPermalink(lines: CheckoutLine[]): string {
 
   const params = new URLSearchParams({
     storefront: "mirror",
-    "attributes[source]": "glowdevice-storefront",
+    "attributes[source]": "pawandmeow-storefront",
     "attributes[mirror_url]": STOREFRONT_PUBLIC_URL,
   });
 
@@ -153,7 +153,7 @@ export async function createStorefrontCheckout(
       quantity: Math.max(1, Math.floor(l.quantity)),
     })),
     attributes: [
-      { key: "source", value: "glowdevice-storefront" },
+      { key: "source", value: "pawandmeow-storefront" },
       { key: "mirror_url", value: STOREFRONT_PUBLIC_URL },
     ],
   };

@@ -12,16 +12,7 @@ import {
 
 type Props = { params: { handle: string } };
 
-export const revalidate = 300;
-
-export async function generateStaticParams() {
-  try {
-    const products = await fetchCatalog();
-    return products.map((p) => ({ handle: p.handle }));
-  } catch {
-    return [];
-  }
-}
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await fetchProductByHandle(params.handle);
