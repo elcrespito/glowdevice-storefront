@@ -3,7 +3,7 @@ import { ProductCard } from "@/components/product-card";
 import { BRAND } from "@/lib/config";
 import { fetchCatalog } from "@/lib/shopify";
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   const products = await fetchCatalog();
