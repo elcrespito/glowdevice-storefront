@@ -21,8 +21,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+RUN apk add --no-cache libc6-compat
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
+
+# Install sharp for image optimization in standalone mode
+RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
+RUN pnpm add sharp
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
