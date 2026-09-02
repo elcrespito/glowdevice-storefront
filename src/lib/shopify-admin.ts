@@ -170,28 +170,10 @@ export async function ensureOrdersPaidWebhook(
   publicOrigin: string,
 ): Promise<{ id: string; uri: string; created: boolean }> {
   const origin = publicOrigin.replace(/\/+$/, "");
-  const explicitCallback = process.env.SHOPIFY_WEBHOOK_CALLBACK_URL?.trim();
-  const peptidemyCallback =
-    process.env.PEPTIDEMY_WEBHOOK_URL?.trim() ||
-    "https://peptidemy.com/api/webhooks/zeroid";
-  let uri = explicitCallback || "";
-
-  // Peptidemy already has a native Shopify orders/paid receiver. Prefer it
-  // over the temporary Glow host because Shopify rejects sslip/internal URLs.
-  if (!uri && peptidemyCallback) {
-    const callbackUrl = new URL(peptidemyCallback);
-    callbackUrl.pathname = "/api/webhooks/shopify/orders-paid";
-    callbackUrl.search = "";
-    callbackUrl.hash = "";
-    uri = callbackUrl.toString();
+  if (!origin.startsWith("https://")) {
+    throw new Error(`Webhook origin must be HTTPS: ${origin}`);
   }
-  if (!uri) {
-    uri = `${origin}/api/webhooks/shopify`;
-  }
-
-  if (!uri.startsWith("https://")) {
-    throw new Error(`Webhook URI must be HTTPS: ${uri}`);
-  }
+  const uri = `${origin}/api/webhooks/shopify`;
 
   if (ensuredOrdersPaidWebhookUri === uri) {
     return { id: "cached", uri, created: false };
