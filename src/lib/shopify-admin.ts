@@ -1,5 +1,5 @@
 import type { HandoffPayload } from "./handoff";
-import { STORE_BASE_URL, STORE_DOMAIN } from "./config";
+import { STORE_DOMAIN } from "./config";
 
 /**
  * Shop host for Admin API / OAuth token endpoint.
@@ -33,10 +33,6 @@ export function isShopifyAdminConfigured() {
   );
 }
 
-/**
- * Official client_credentials host must be *.myshopify.com.
- * @see https://shopify.dev/docs/apps/build/authentication-authorization/access-tokens/client-credentials-grant
- */
 export async function resolveShopifyAdminHost(
   shop = SHOP_ENV,
 ): Promise<string> {
@@ -170,58 +166,10 @@ async function convertAmount(
   return amount;
 }
 
-type GlowCatalogItem = { title: string; price: number };
-
-async function fetchGlowCatalog(): Promise<GlowCatalogItem[]> {
-  try {
-    const res = await fetch(`${STORE_BASE_URL}/products.json?limit=250`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      products?: Array<{
-        title: string;
-        variants?: Array<{ price: string }>;
-      }>;
-    };
-    return (data.products || [])
-      .map((p) => ({
-        title: p.title,
-        price: Number(p.variants?.[0]?.price || 0),
-      }))
-      .filter((p) => p.title && p.price > 0);
-  } catch {
-    return [];
-  }
-}
-
-function pickGlowTitle(
-  targetPrice: number,
-  catalog: GlowCatalogItem[],
-  usedTitles: Set<string>,
-): string {
-  if (!catalog.length) return "Beauty Device Kit";
-  const available = catalog.filter((c) => !usedTitles.has(c.title));
-  const pool = available.length ? available : catalog;
-  let best = pool[0];
-  let bestDist = Math.abs(best.price - targetPrice);
-  for (const item of pool) {
-    const dist = Math.abs(item.price - targetPrice);
-    if (dist < bestDist) {
-      best = item;
-      bestDist = dist;
-    }
-  }
-  usedTitles.add(best.title);
-  return best.title;
-}
-
 function money(n: number): string {
   return (Math.round(n * 100) / 100).toFixed(2);
 }
 
-/** Shopify rejects disposable/fake domains (e.g. wewe@ewwe.we). Omit bad emails. */
 function shopifySafeEmail(email: string | null | undefined): string | undefined {
   if (!email) return undefined;
   const trimmed = email.trim().toLowerCase();
@@ -239,10 +187,6 @@ function shopifySafeEmail(email: string | null | undefined): string | undefined 
   return trimmed;
 }
 
-/**
- * Build draft line items for consultation booking.
- * Creates a single "Consultation" line item with the total amount.
- */
 async function buildConsultationLineItems(payload: HandoffPayload): Promise<{
   currency: string;
   lineItems: Array<{
@@ -255,18 +199,14 @@ async function buildConsultationLineItems(payload: HandoffPayload): Promise<{
   }>;
 }> {
   const shopCurrency = await getShopCurrency();
-  
-  // Convert total amount to shop currency
   const orderTotalSrc = payload.totalMinor / 100;
   const orderTotalDst = await convertAmount(
     orderTotalSrc,
     payload.currency,
     shopCurrency,
   );
-
-  // Create single consultation line item
   const consultationTitle = payload.lines[0]?.title || "ZEROID Consultation";
-  
+
   const lineItems = [{
     title: consultationTitle,
     price: money(orderTotalDst),
@@ -286,8 +226,7 @@ export async function createDraftOrderFromHandoff(
   const accessToken = await getAdminAccessToken();
   const { currency, lineItems } = await buildConsultationLineItems(payload);
   const safeEmail = shopifySafeEmail(payload.email);
-  
-  // Get return URL for redirect after payment
+
   const returnUrl = process.env.PEPTIDEMY_RETURN_URL || "https://peptidemy.com";
   const returnUrlWithOrder = `${returnUrl}/orders/${payload.orderId}?status=paid`;
 
@@ -312,8 +251,6 @@ export async function createDraftOrderFromHandoff(
         shipping_line: null,
         use_customer_default_address: false,
         tags: "peptidemy,zeroid-consultation",
-        // Shopify will append ?key=xxx&return_to=... to invoice_url automatically
-        // when customer completes payment, they'll be redirected to return_url
       },
     };
 
