@@ -1,10 +1,10 @@
-client_id = ""
+client_id = "209ad23df4133a2a48a63660c10777ce"
 name = "pawandmeow"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://appteccarrentals.com"
 embedded = false
 
 [access_scopes]
-scopes = "read_products,read_draft_orders,write_draft_orders,read_orders"
+scopes = "read_products,write_products,read_draft_orders,write_draft_orders,read_orders,write_orders"
 
 [build]
 automatically_update_urls_on_dev = false
