@@ -11,9 +11,9 @@ export function GET(request: Request) {
 
   // Preserve campaign params if Shopify ever appends them, but never forward
   // arbitrary path/query data that could turn this into an open redirect.
-  for (const [key, value] of source.searchParams) {
+  source.searchParams.forEach((value, key) => {
     if (key.startsWith("utm_")) destination.searchParams.set(key, value);
-  }
+  });
 
   return NextResponse.redirect(destination, 302);
 }
