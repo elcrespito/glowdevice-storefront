@@ -1,0 +1,12 @@
+client_id = ""
+name = "pawandmeow"
+application_url = "https://shopify.dev/apps/default-app-home"
+embedded = false
+
+[access_scopes]
+scopes = "read_products,read_draft_orders,write_draft_orders,read_orders"
+
+[build]
+automatically_update_urls_on_dev = false
+
+extension_directories = ["extensions/"]
