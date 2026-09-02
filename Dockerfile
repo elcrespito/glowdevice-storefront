@@ -25,7 +25,10 @@ RUN apk add --no-cache libc6-compat
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
-# Install sharp for image optimization in standalone mode
+# Establish a dependency on the deps stage before installing sharp. Without it
+# BuildKit runs this install alongside the main pnpm install, which can exhaust
+# a small Coolify builder and terminate the deploy with exit code 255.
+COPY --from=deps /app/package.json /tmp/deps-package.json
 RUN corepack enable && corepack prepare pnpm@9.15.9 --activate
 RUN pnpm add sharp
 
