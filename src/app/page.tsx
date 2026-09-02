@@ -28,7 +28,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-[#fff8f6]/95 via-[#fff8f6]/85 to-[#fff8f6]/35" />
         <div className="relative mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-end px-4 pb-16 pt-24 sm:px-6 sm:pb-20">
           <p className="animate-rise text-xs uppercase tracking-[0.28em] text-rose-500">
-            Premium pet products · Curated selection
+            Professional consultations · Expert guidance
           </p>
           <h1 className="animate-rise-delay mt-3 max-w-2xl font-display text-5xl leading-[0.95] text-stone-900 sm:text-7xl">
             {BRAND.name}
@@ -41,7 +41,7 @@ export default async function HomePage() {
               href="#collection"
               className="bg-stone-900 px-6 py-3.5 text-sm font-medium uppercase tracking-[0.14em] text-white transition hover:bg-stone-800"
             >
-              Shop collection
+              View consultations
             </Link>
             <Link
               href="/cart"
@@ -57,13 +57,13 @@ export default async function HomePage() {
         <div className="mb-10 flex items-end justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-rose-400">
-              Catalog live from pawandmeow.myshopify.com
+              Available consultations
             </p>
             <h2 className="mt-2 font-display text-4xl text-stone-900">
-              The collection
+              Our services
             </h2>
           </div>
-          <p className="text-sm text-stone-500">{products.length} products</p>
+          <p className="text-sm text-stone-500">{products.length} available</p>
         </div>
 
         <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">

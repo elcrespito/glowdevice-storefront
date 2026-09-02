@@ -240,10 +240,10 @@ function shopifySafeEmail(email: string | null | undefined): string | undefined 
 }
 
 /**
- * Build draft line items in the Shopify shop currency with storefront catalog titles.
- * Keeps paid amount equal to handoff total (products + shipping gap).
+ * Build draft line items for consultation booking.
+ * Creates a single "Consultation" line item with the total amount.
  */
-async function buildStorefrontLineItems(payload: HandoffPayload): Promise<{
+async function buildConsultationLineItems(payload: HandoffPayload): Promise<{
   currency: string;
   lineItems: Array<{
     title: string;
@@ -255,60 +255,26 @@ async function buildStorefrontLineItems(payload: HandoffPayload): Promise<{
   }>;
 }> {
   const shopCurrency = await getShopCurrency();
-  const catalog = await fetchGlowCatalog();
-  const usedTitles = new Set<string>();
-
-  const convertedLines: Array<{
-    title: string;
-    unitPrice: number;
-    quantity: number;
-    sku?: string;
-  }> = [];
-
-  for (const line of payload.lines) {
-    const qty = Math.max(1, Math.floor(line.quantity));
-    const unitSrc = Number(line.price);
-    const unitDst = await convertAmount(unitSrc, payload.currency, shopCurrency);
-    const title = pickGlowTitle(unitDst, catalog, usedTitles);
-    convertedLines.push({
-      title,
-      unitPrice: unitDst,
-      quantity: qty,
-      sku: line.sku,
-    });
-  }
-
-  const productsTotal = convertedLines.reduce(
-    (sum, l) => sum + l.unitPrice * l.quantity,
-    0,
-  );
+  
+  // Convert total amount to shop currency
   const orderTotalSrc = payload.totalMinor / 100;
   const orderTotalDst = await convertAmount(
     orderTotalSrc,
     payload.currency,
     shopCurrency,
   );
-  const shippingGap = Math.round((orderTotalDst - productsTotal) * 100) / 100;
 
-  const lineItems = convertedLines.map((l) => ({
-    title: l.title,
-    price: money(l.unitPrice),
-    quantity: l.quantity,
-    sku: l.sku,
+  // Create single consultation line item
+  const consultationTitle = payload.lines[0]?.title || "ZEROID Consultation";
+  
+  const lineItems = [{
+    title: consultationTitle,
+    price: money(orderTotalDst),
+    quantity: 1,
+    sku: payload.lines[0]?.sku || "ZEROID-CONSULT",
     requires_shipping: false,
     taxable: false,
-  }));
-
-  if (shippingGap > 0.009) {
-    lineItems.push({
-      title: pickGlowTitle(shippingGap, catalog, usedTitles),
-      price: money(shippingGap),
-      quantity: 1,
-      sku: "WS-SHIP",
-      requires_shipping: false,
-      taxable: false,
-    });
-  }
+  }];
 
   return { currency: shopCurrency, lineItems };
 }
@@ -318,8 +284,12 @@ export async function createDraftOrderFromHandoff(
 ): Promise<{ id: string; invoiceUrl: string }> {
   const shop = await resolveShopifyAdminHost();
   const accessToken = await getAdminAccessToken();
-  const { currency, lineItems } = await buildStorefrontLineItems(payload);
+  const { currency, lineItems } = await buildConsultationLineItems(payload);
   const safeEmail = shopifySafeEmail(payload.email);
+  
+  // Get return URL for redirect after payment
+  const returnUrl = process.env.PEPTIDEMY_RETURN_URL || "https://peptidemy.com";
+  const returnUrlWithOrder = `${returnUrl}/orders/${payload.orderId}?status=paid`;
 
   async function postDraft(email?: string) {
     const body = {
@@ -330,17 +300,20 @@ export async function createDraftOrderFromHandoff(
         note_attributes: [
           { name: "internal_order_id", value: payload.orderId },
           { name: "internal_ref", value: payload.ref },
-          { name: "source", value: "peptides-handoff" },
+          { name: "source", value: "peptidemy-zeroid" },
           { name: "source_currency", value: payload.currency },
           { name: "source_total_minor", value: String(payload.totalMinor) },
+          { name: "return_url", value: returnUrlWithOrder },
           ...(payload.email
             ? [{ name: "customer_email_raw", value: String(payload.email) }]
             : []),
         ],
-        note: "Glow Device order — fulfilment handled internally.",
+        note: `ZEROID consultation booking - Order #${payload.orderId}`,
         shipping_line: null,
         use_customer_default_address: false,
-        tags: "peptides-handoff,glowdevice",
+        tags: "peptidemy,zeroid-consultation",
+        // Shopify will append ?key=xxx&return_to=... to invoice_url automatically
+        // when customer completes payment, they'll be redirected to return_url
       },
     };
 
@@ -398,6 +371,8 @@ export async function createDraftOrderFromHandoff(
     "←",
     payload.totalMinor / 100,
     payload.currency,
+    "return:",
+    returnUrlWithOrder,
   );
 
   return { id: String(draft.id), invoiceUrl: draft.invoice_url };

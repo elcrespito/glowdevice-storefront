@@ -32,7 +32,7 @@ type CartContextValue = {
   ready: boolean;
 };
 
-const STORAGE_KEY = "pawandmeow-cart-v1";
+const STORAGE_KEY = "zeroid-cart-v1";
 const CartContext = createContext<CartContextValue | null>(null);
 
 function loadItems(): CartItem[] {
