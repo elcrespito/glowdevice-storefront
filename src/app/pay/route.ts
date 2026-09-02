@@ -60,8 +60,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Never create a checkout whose paid event has nowhere to go.
-    await ensureOrdersPaidWebhook(req.nextUrl.origin);
+    const manualWebhookMode =
+      process.env.SHOPIFY_WEBHOOK_MODE?.trim().toLowerCase() === "manual";
+    if (manualWebhookMode) {
+      if (!process.env.SHOPIFY_WEBHOOK_SECRET?.trim()) {
+        throw new Error(
+          "Manual webhook mode requires SHOPIFY_WEBHOOK_SECRET",
+        );
+      }
+      console.info("[pay] using manually configured Shopify orders/paid webhook");
+    } else {
+      // Never create a checkout whose paid event has nowhere to go.
+      await ensureOrdersPaidWebhook(req.nextUrl.origin);
+    }
+
     const draft = await createDraftOrderFromHandoff(payload);
     return NextResponse.redirect(draft.invoiceUrl, 302);
   } catch (err) {
