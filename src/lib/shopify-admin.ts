@@ -25,6 +25,7 @@ const CLIENT_SECRET = process.env.SHOPIFY_CLIENT_SECRET || "";
 type CachedToken = { token: string; expiresAtMs: number };
 let cachedToken: CachedToken | null = null;
 let resolvedShopHost: string | null = null;
+let ensuredOrdersPaidWebhookUri: string | null = null;
 
 export function isShopifyAdminConfigured() {
   return !!(
@@ -112,6 +113,141 @@ export async function getAdminAccessToken(): Promise<string> {
   throw new Error(
     "Set SHOPIFY_CLIENT_ID + SHOPIFY_CLIENT_SECRET (or legacy SHOPIFY_ADMIN_TOKEN)",
   );
+}
+
+
+type ShopifyGraphqlEnvelope<T> = {
+  data?: T;
+  errors?: Array<{ message?: string }>;
+};
+
+async function shopifyAdminGraphql<T>(
+  query: string,
+  variables?: Record<string, unknown>,
+): Promise<T> {
+  const shop = await resolveShopifyAdminHost();
+  const accessToken = await getAdminAccessToken();
+  const res = await fetch(`https://${shop}/admin/api/${API_VERSION}/graphql.json`, {
+    method: "POST",
+    headers: {
+      "X-Shopify-Access-Token": accessToken,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+    cache: "no-store",
+  });
+  const text = await res.text().catch(() => "");
+  if (!res.ok) {
+    throw new Error(
+      `Shopify GraphQL failed ${res.status}: ${text.slice(0, 500)}`,
+    );
+  }
+
+  let json: ShopifyGraphqlEnvelope<T>;
+  try {
+    json = JSON.parse(text) as ShopifyGraphqlEnvelope<T>;
+  } catch {
+    throw new Error(`Shopify GraphQL returned bad JSON: ${text.slice(0, 300)}`);
+  }
+
+  if (json.errors?.length) {
+    throw new Error(
+      `Shopify GraphQL errors: ${json.errors
+        .map((error) => error.message || "unknown")
+        .join("; ")}`,
+    );
+  }
+  if (!json.data) throw new Error("Shopify GraphQL returned no data");
+  return json.data;
+}
+
+/**
+ * Ensures this installed app receives ORDERS_PAID before a checkout is created.
+ * The operation is idempotent and cached after Shopify confirms the subscription.
+ */
+export async function ensureOrdersPaidWebhook(
+  publicOrigin: string,
+): Promise<{ id: string; uri: string; created: boolean }> {
+  const origin = publicOrigin.replace(/\/+$/, "");
+  if (!origin.startsWith("https://")) {
+    throw new Error(`Webhook origin must be HTTPS: ${origin}`);
+  }
+  const uri = `${origin}/api/webhooks/shopify`;
+
+  if (ensuredOrdersPaidWebhookUri === uri) {
+    return { id: "cached", uri, created: false };
+  }
+
+  type ExistingResult = {
+    webhookSubscriptions: {
+      nodes: Array<{ id: string; topic: string; uri: string }>;
+    };
+  };
+  const existing = await shopifyAdminGraphql<ExistingResult>(`
+    query ExistingOrdersPaidWebhooks {
+      webhookSubscriptions(first: 100, topics: [ORDERS_PAID]) {
+        nodes { id topic uri }
+      }
+    }
+  `);
+  const match = existing.webhookSubscriptions.nodes.find(
+    (subscription) => subscription.uri === uri,
+  );
+  if (match) {
+    ensuredOrdersPaidWebhookUri = uri;
+    console.info("[shopify-webhook] ORDERS_PAID subscription already active", match);
+    return { id: match.id, uri, created: false };
+  }
+
+  type CreateResult = {
+    webhookSubscriptionCreate: {
+      webhookSubscription: { id: string; topic: string; uri: string } | null;
+      userErrors: Array<{ field?: string[]; message: string }>;
+    };
+  };
+  const created = await shopifyAdminGraphql<CreateResult>(
+    `
+      mutation CreateOrdersPaidWebhook(
+        $topic: WebhookSubscriptionTopic!
+        $webhookSubscription: WebhookSubscriptionInput!
+      ) {
+        webhookSubscriptionCreate(
+          topic: $topic
+          webhookSubscription: $webhookSubscription
+        ) {
+          webhookSubscription { id topic uri }
+          userErrors { field message }
+        }
+      }
+    `,
+    {
+      topic: "ORDERS_PAID",
+      webhookSubscription: { uri },
+    },
+  );
+  const result = created.webhookSubscriptionCreate;
+  if (result.userErrors.length) {
+    throw new Error(
+      `Shopify webhook subscription rejected: ${result.userErrors
+        .map((error) => error.message)
+        .join("; ")}`,
+    );
+  }
+  if (!result.webhookSubscription) {
+    throw new Error("Shopify webhook subscription was not created");
+  }
+
+  ensuredOrdersPaidWebhookUri = uri;
+  console.info(
+    "[shopify-webhook] ORDERS_PAID subscription created",
+    result.webhookSubscription,
+  );
+  return {
+    id: result.webhookSubscription.id,
+    uri: result.webhookSubscription.uri,
+    created: true,
+  };
 }
 
 export async function fetchShopJson(

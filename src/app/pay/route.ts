@@ -6,6 +6,7 @@ import {
 } from "@/lib/handoff";
 import {
   createDraftOrderFromHandoff,
+  ensureOrdersPaidWebhook,
   isShopifyAdminConfigured,
 } from "@/lib/shopify-admin";
 
@@ -59,6 +60,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Never create a checkout whose paid event has nowhere to go.
+    await ensureOrdersPaidWebhook(req.nextUrl.origin);
     const draft = await createDraftOrderFromHandoff(payload);
     return NextResponse.redirect(draft.invoiceUrl, 302);
   } catch (err) {

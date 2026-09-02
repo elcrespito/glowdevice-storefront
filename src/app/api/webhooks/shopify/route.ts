@@ -34,9 +34,13 @@ type ShopifyDraftOrderPayload = {
  * idempotent callback to Peptidemy.
  */
 export async function POST(req: NextRequest) {
-  const shopifySecret =
-    process.env.SHOPIFY_WEBHOOK_SECRET || process.env.SHOPIFY_CLIENT_SECRET || "";
-  if (!shopifySecret) {
+  const shopifySecrets = [
+    process.env.SHOPIFY_CLIENT_SECRET,
+    process.env.SHOPIFY_WEBHOOK_SECRET,
+  ]
+    .map((secret) => secret?.trim() || "")
+    .filter((secret, index, all) => secret && all.indexOf(secret) === index);
+  if (shopifySecrets.length === 0) {
     console.error("[webhook] Shopify webhook secret not configured");
     return NextResponse.json(
       { error: "webhook_unconfigured" },
@@ -55,16 +59,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing_signature" }, { status: 401 });
   }
 
-  const expected = createHmac("sha256", shopifySecret)
-    .update(body, "utf8")
-    .digest("base64");
   const suppliedBuffer = Buffer.from(hmacHeader);
-  const expectedBuffer = Buffer.from(expected);
+  const signatureValid = shopifySecrets.some((secret) => {
+    const expected = createHmac("sha256", secret)
+      .update(body, "utf8")
+      .digest("base64");
+    const expectedBuffer = Buffer.from(expected);
+    return (
+      suppliedBuffer.length === expectedBuffer.length &&
+      timingSafeEqual(suppliedBuffer, expectedBuffer)
+    );
+  });
 
-  if (
-    suppliedBuffer.length !== expectedBuffer.length ||
-    !timingSafeEqual(suppliedBuffer, expectedBuffer)
-  ) {
+  if (!signatureValid) {
     console.error("[webhook] invalid Shopify signature");
     return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
   }
