@@ -58,7 +58,7 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
     <div className="relative z-10 space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.2em] text-rose-400">
-          {product.product_type || "Beauty device"}
+          {product.product_type || "Consultation"}
         </p>
         <h1 className="mt-2 font-display text-4xl leading-tight text-stone-900 sm:text-5xl">
           {product.title}
@@ -113,15 +113,14 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
           disabled={busy !== null}
           className="flex-1 border border-rose-300 bg-rose-50 px-6 py-3.5 text-sm font-medium uppercase tracking-[0.14em] text-stone-900 transition hover:bg-rose-100 disabled:opacity-60"
         >
-          {busy === "buy" ? "Redirecting…" : "Buy now — checkout on Glow"}
+          {busy === "buy" ? "Redirecting…" : "Book consultation"}
         </button>
       </div>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <p className="text-xs leading-relaxed text-stone-500">
-        Payment and shipping are completed on pawandmeow.myshopify.com Shopify checkout.
-        Your cart is handed off with the same products and quantities.
+        Secure payment processing via Shopify. You'll be redirected to complete checkout.
       </p>
     </div>
   );

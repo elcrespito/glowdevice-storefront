@@ -24,7 +24,7 @@ export function SiteHeader() {
             href="/#collection"
             className="hidden transition hover:text-stone-950 sm:inline"
           >
-            Collection
+            Consultations
           </Link>
           <Link
             href="/cart"
@@ -48,16 +48,8 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-rose-100/80 bg-[#fff8f6]">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-10 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p className="font-display text-lg text-stone-800">{BRAND.name}</p>
-        <p>
-          Secure checkout on{" "}
-          <a
-            href="https://pawandmeow.myshopify.com"
-            className="underline decoration-rose-300 underline-offset-4 hover:text-stone-800"
-            target="_blank"
-            rel="noreferrer"
-          >
-            pawandmeow.myshopify.com
-          </a>
+        <p className="text-xs">
+          Secure payment processing powered by Shopify
         </p>
       </div>
     </footer>

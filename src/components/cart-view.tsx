@@ -27,7 +27,7 @@ export function CartView() {
           href="/#collection"
           className="inline-block border border-stone-900 bg-stone-900 px-6 py-3 text-sm uppercase tracking-[0.14em] text-white"
         >
-          Browse collection
+          Browse consultations
         </Link>
       </div>
     );
@@ -100,8 +100,7 @@ export function CartView() {
           <span className="text-lg font-medium">{formatMoney(subtotal)}</span>
         </div>
         <p className="text-xs leading-relaxed text-stone-500">
-          Taxes and shipping are calculated on pawandmeow.myshopify.com during the final
-          Shopify checkout step.
+          Secure payment via Shopify. Taxes calculated at checkout.
         </p>
         {error === "checkout_failed" ? (
           <p className="text-sm text-red-600">Checkout failed. Try again.</p>
@@ -111,7 +110,7 @@ export function CartView() {
           onClick={() => clear()}
           className="block w-full bg-stone-900 px-6 py-3.5 text-center text-sm font-medium uppercase tracking-[0.14em] text-white transition hover:bg-stone-800"
         >
-          Checkout on pawandmeow.myshopify.com
+          Proceed to checkout
         </a>
         <p className="break-all text-[11px] text-stone-400">GET {goHref}</p>
       </aside>

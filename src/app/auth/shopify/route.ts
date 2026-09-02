@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const shop = (
     shopParam ||
     process.env.SHOPIFY_SHOP_DOMAIN ||
-    "pawandmeow.myshopify.com"
+    "zeroid-2.myshopify.com"
   )
     .replace(/^https?:\/\//, "")
     .replace(/\/$/, "");

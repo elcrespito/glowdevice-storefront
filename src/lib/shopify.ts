@@ -113,8 +113,8 @@ export function buildCartPermalink(lines: CheckoutLine[]): string {
     .join(",");
 
   const params = new URLSearchParams({
-    storefront: "mirror",
-    "attributes[source]": "pawandmeow-storefront",
+    storefront: "zeroid",
+    "attributes[source]": "zeroid-consultations",
     "attributes[mirror_url]": STOREFRONT_PUBLIC_URL,
   });
 
@@ -153,7 +153,7 @@ export async function createStorefrontCheckout(
       quantity: Math.max(1, Math.floor(l.quantity)),
     })),
     attributes: [
-      { key: "source", value: "pawandmeow-storefront" },
+      { key: "source", value: "zeroid-consultations" },
       { key: "mirror_url", value: STOREFRONT_PUBLIC_URL },
     ],
   };

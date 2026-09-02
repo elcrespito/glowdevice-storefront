@@ -2,7 +2,7 @@ export const STORE_DOMAIN =
   process.env.SHOPIFY_STORE_DOMAIN?.replace(/^https?:\/\//, "").replace(
     /\/$/,
     "",
-  ) || "pawandmeow.myshopify.com";
+  ) || "zeroid-2.myshopify.com";
 
 export const STORE_BASE_URL = `https://${STORE_DOMAIN}`;
 
@@ -14,9 +14,12 @@ export const STOREFRONT_API_VERSION =
 export const STOREFRONT_PUBLIC_URL =
   process.env.NEXT_PUBLIC_STOREFRONT_URL || "http://localhost:3000";
 
+export const PEPTIDEMY_RETURN_URL =
+  process.env.PEPTIDEMY_RETURN_URL || "https://peptidemy.com";
+
 export const BRAND = {
-  name: "Paw & Meow",
-  tagline: "Premium Pet Care",
+  name: "ZEROID",
+  tagline: "Professional Consultations",
   description:
-    "Curated selection of premium products for your beloved pets.",
+    "Expert consultations tailored to your needs.",
 } as const;
