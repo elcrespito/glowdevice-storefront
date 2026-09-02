@@ -171,7 +171,9 @@ export async function ensureOrdersPaidWebhook(
 ): Promise<{ id: string; uri: string; created: boolean }> {
   const origin = publicOrigin.replace(/\/+$/, "");
   const explicitCallback = process.env.SHOPIFY_WEBHOOK_CALLBACK_URL?.trim();
-  const peptidemyCallback = process.env.PEPTIDEMY_WEBHOOK_URL?.trim();
+  const peptidemyCallback =
+    process.env.PEPTIDEMY_WEBHOOK_URL?.trim() ||
+    "https://peptidemy.com/api/webhooks/zeroid";
   let uri = explicitCallback || "";
 
   // Peptidemy already has a native Shopify orders/paid receiver. Prefer it
