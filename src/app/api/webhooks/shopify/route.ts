@@ -3,6 +3,29 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 export const dynamic = "force-dynamic";
 
+type ShopifyNoteAttribute = {
+  name?: string;
+  value?: string | number | null;
+};
+
+type ShopifyOrderPayload = {
+  id?: string | number | null;
+  name?: string | null;
+  order_number?: string | number | null;
+  financial_status?: string | null;
+  total_price?: string | number | null;
+  currency?: string | null;
+  processed_at?: string | null;
+  note_attributes?: ShopifyNoteAttribute[] | null;
+};
+
+type ShopifyDraftOrderPayload = {
+  id?: string | number | null;
+  status?: string | null;
+  completed_at?: string | null;
+  order_id?: string | number | null;
+};
+
 /**
  * POST /api/webhooks/shopify
  *
@@ -11,9 +34,6 @@ export const dynamic = "force-dynamic";
  * idempotent callback to Peptidemy.
  */
 export async function POST(req: NextRequest) {
-  // Shopify signs app webhooks with the app secret. Keep the dedicated env var
-  // for explicit configuration, but fall back to SHOPIFY_CLIENT_SECRET so the
-  // same Dev Dashboard app secret can be used without duplicating config.
   const shopifySecret =
     process.env.SHOPIFY_WEBHOOK_SECRET || process.env.SHOPIFY_CLIENT_SECRET || "";
   if (!shopifySecret) {
@@ -49,37 +69,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
   }
 
-  let data: any;
+  let data: unknown;
   try {
-    data = JSON.parse(body);
+    data = JSON.parse(body) as unknown;
   } catch (err) {
     console.error("[webhook] invalid JSON", err);
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
+  const orderData = data as ShopifyOrderPayload;
   console.info("[webhook] received", {
     webhookId,
     topic,
     shop,
-    shopifyOrderId: data?.id,
+    shopifyOrderId: orderData?.id,
   });
 
   try {
     switch (topic) {
       case "orders/paid":
-        await handleOrderPaid(data, webhookId);
+        await handleOrderPaid(orderData, webhookId);
         break;
       case "draft_orders/update":
-        handleDraftOrderUpdate(data);
+        handleDraftOrderUpdate(data as ShopifyDraftOrderPayload);
         break;
       case "orders/create":
-        handleOrderCreate(data);
+        handleOrderCreate(orderData);
         break;
       default:
         console.warn("[webhook] unhandled topic:", topic);
     }
   } catch (err) {
-    // Returning non-2xx is intentional: Shopify should retry transient failures.
     console.error("[webhook] processing failed", { webhookId, topic, err });
     return NextResponse.json({ error: "processing_failed" }, { status: 502 });
   }
@@ -87,47 +107,45 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true, webhookId: webhookId || undefined });
 }
 
-async function handleOrderPaid(order: any, webhookId: string) {
-  const financialStatus = String(order?.financial_status || "").toLowerCase();
+async function handleOrderPaid(order: ShopifyOrderPayload, webhookId: string) {
+  const financialStatus = String(order.financial_status || "").toLowerCase();
   if (financialStatus && financialStatus !== "paid") {
     console.warn("[webhook/orders/paid] unexpected financial status", {
       webhookId,
-      shopifyOrderId: order?.id,
+      shopifyOrderId: order.id,
       financialStatus,
     });
     return;
   }
 
-  const noteAttributes = Array.isArray(order?.note_attributes)
+  const noteAttributes = Array.isArray(order.note_attributes)
     ? order.note_attributes
     : [];
   const internalOrderId = noteAttributes.find(
-    (attr: any) => attr?.name === "internal_order_id",
+    (attr) => attr.name === "internal_order_id",
   )?.value;
   const internalRef = noteAttributes.find(
-    (attr: any) => attr?.name === "internal_ref",
+    (attr) => attr.name === "internal_ref",
   )?.value;
   const returnUrl = noteAttributes.find(
-    (attr: any) => attr?.name === "return_url",
+    (attr) => attr.name === "return_url",
   )?.value;
 
   console.info("[webhook/orders/paid]", {
     webhookId,
-    shopifyOrderId: order?.id,
-    orderNumber: order?.order_number || order?.name,
+    shopifyOrderId: order.id,
+    orderNumber: order.order_number || order.name,
     internalOrderId,
     internalRef,
-    totalPrice: order?.total_price,
-    currency: order?.currency,
+    totalPrice: order.total_price,
+    currency: order.currency,
     financialStatus,
   });
 
-  // Orders unrelated to the Peptidemy handoff should be acknowledged rather
-  // than retried forever.
   if (!internalOrderId && !internalRef) {
     console.warn("[webhook/orders/paid] no Peptidemy correlation attributes", {
       webhookId,
-      shopifyOrderId: order?.id,
+      shopifyOrderId: order.id,
     });
     return;
   }
@@ -141,20 +159,20 @@ async function handleOrderPaid(order: any, webhookId: string) {
   });
 }
 
-function handleDraftOrderUpdate(draftOrder: any) {
+function handleDraftOrderUpdate(draftOrder: ShopifyDraftOrderPayload) {
   console.info("[webhook/draft_orders/update]", {
-    id: draftOrder?.id,
-    status: draftOrder?.status,
-    completedAt: draftOrder?.completed_at,
-    orderId: draftOrder?.order_id,
+    id: draftOrder.id,
+    status: draftOrder.status,
+    completedAt: draftOrder.completed_at,
+    orderId: draftOrder.order_id,
   });
 }
 
-function handleOrderCreate(order: any) {
+function handleOrderCreate(order: ShopifyOrderPayload) {
   console.info("[webhook/orders/create]", {
-    id: order?.id,
-    orderNumber: order?.order_number || order?.name,
-    financialStatus: order?.financial_status,
+    id: order.id,
+    orderNumber: order.order_number || order.name,
+    financialStatus: order.financial_status,
   });
 }
 
@@ -163,7 +181,7 @@ async function notifyPeptidemy(input: {
   internalRef?: string;
   returnUrl?: string;
   webhookId: string;
-  shopifyOrder: any;
+  shopifyOrder: ShopifyOrderPayload;
 }) {
   const peptidemyWebhookUrl = process.env.PEPTIDEMY_WEBHOOK_URL?.trim();
   const handoffSecret = process.env.GLOW_HANDOFF_SECRET?.trim();
@@ -177,17 +195,17 @@ async function notifyPeptidemy(input: {
 
   const order = input.shopifyOrder;
   const idempotencyKey =
-    input.webhookId || `shopify-order-paid-${String(order?.id || "unknown")}`;
+    input.webhookId || `shopify-order-paid-${String(order.id || "unknown")}`;
   const payload = {
     orderId: input.internalOrderId,
     orderRef: input.internalRef,
     status: "paid",
     shopifyWebhookId: input.webhookId || null,
-    shopifyOrderId: order?.id != null ? String(order.id) : null,
-    shopifyOrderNumber: order?.order_number || order?.name || null,
-    totalPrice: order?.total_price != null ? String(order.total_price) : null,
-    currency: order?.currency || null,
-    paidAt: order?.processed_at || new Date().toISOString(),
+    shopifyOrderId: order.id != null ? String(order.id) : null,
+    shopifyOrderNumber: order.order_number || order.name || null,
+    totalPrice: order.total_price != null ? String(order.total_price) : null,
+    currency: order.currency || null,
+    paidAt: order.processed_at || new Date().toISOString(),
     returnUrl: input.returnUrl || null,
   };
   const rawPayload = JSON.stringify(payload);
@@ -219,6 +237,6 @@ async function notifyPeptidemy(input: {
     idempotencyKey,
     internalOrderId: input.internalOrderId,
     internalRef: input.internalRef,
-    shopifyOrderId: order?.id,
+    shopifyOrderId: order.id,
   });
 }
