@@ -1,5 +1,9 @@
-import type { HandoffPayload } from "./handoff";
-import { STORE_BASE_URL, STORE_DOMAIN } from "./config";
+import { signPayload, type HandoffPayload } from "./handoff";
+import {
+  STORE_BASE_URL,
+  STORE_DOMAIN,
+  STOREFRONT_PUBLIC_URL,
+} from "./config";
 
 /**
  * Shop host for Admin API / OAuth token endpoint.
@@ -287,9 +291,15 @@ export async function createDraftOrderFromHandoff(
   const { currency, lineItems } = await buildConsultationLineItems(payload);
   const safeEmail = shopifySafeEmail(payload.email);
   
-  // Get return URL for redirect after payment
-  const returnUrl = process.env.PEPTIDEMY_RETURN_URL || "https://peptidemy.com";
-  const returnUrlWithOrder = `${returnUrl}/orders/${payload.orderId}?status=paid`;
+  const handoffSecret = process.env.GLOW_HANDOFF_SECRET || "";
+  const returnSignature = signPayload(
+    `payment-return:${payload.orderId}`,
+    handoffSecret,
+  );
+  const returnUrl = new URL("/payment/complete", STOREFRONT_PUBLIC_URL);
+  returnUrl.searchParams.set("orderId", payload.orderId);
+  returnUrl.searchParams.set("sig", returnSignature);
+  const returnUrlWithOrder = returnUrl.toString();
 
   async function postDraft(email?: string) {
     const body = {
@@ -312,8 +322,6 @@ export async function createDraftOrderFromHandoff(
         shipping_line: null,
         use_customer_default_address: false,
         tags: "zeroid-consultation",
-        // Shopify will append ?key=xxx&return_to=... to invoice_url automatically
-        // when customer completes payment, they'll be redirected to return_url
       },
     };
 

@@ -8,7 +8,7 @@ Professional consultation booking platform with Shopify payment processing.
 2. **Payment Processing** — Secure Shopify Draft Order checkout
 3. **Peptidemy Integration** — Signed handoff from peptidemy.com
 4. **Webhooks** — Real-time payment notifications back to peptidemy.com
-5. **Return Flow** — Automatic redirect to peptidemy.com after payment
+5. **Return Flow** — Signed ZEROID return route that forwards to peptidemy.com
 
 ## Flow: Peptidemy → ZEROID → Shopify
 
@@ -17,12 +17,20 @@ peptidemy.com  GET /api/orders/:id/pay/zeroid
   → zeroid  GET /pay?p=<payload>&sig=<hmac>
   → Shopify Draft Order invoice_url (302)
   → [Customer pays on Shopify]
-  → Shopify redirects to peptidemy.com/orders/:id?status=paid
+  → Shopify thank-you page links to zeroid /payment/complete?orderId=...&sig=...
+  → zeroid verifies the signature
+  → peptidemy.com/orders/:id?status=paid
   → Shopify webhook → /api/webhooks/shopify
   → zeroid notifies peptidemy.com/api/webhooks/zeroid
 ```
 
 Peptidemy never holds Shopify Admin credentials.
+
+Shopify doesn't support an automatic external redirect after draft-order
+checkout. Add a Checkout UI extension button on the thank-you page and use the
+signed `return_url` order attribute as its destination. Payment status must
+still be confirmed by the `orders/paid` webhook; a browser return isn't proof
+of payment.
 
 ### Env on zeroid-storefront (Coolify)
 
