@@ -300,7 +300,7 @@ export async function createDraftOrderFromHandoff(
         note_attributes: [
           { name: "internal_order_id", value: payload.orderId },
           { name: "internal_ref", value: payload.ref },
-          { name: "source", value: "peptidemy-zeroid" },
+          { name: "source", value: "zeroid" },
           { name: "source_currency", value: payload.currency },
           { name: "source_total_minor", value: String(payload.totalMinor) },
           { name: "return_url", value: returnUrlWithOrder },
@@ -311,7 +311,7 @@ export async function createDraftOrderFromHandoff(
         note: `ZEROID consultation booking - Order #${payload.orderId}`,
         shipping_line: null,
         use_customer_default_address: false,
-        tags: "peptidemy,zeroid-consultation",
+        tags: "zeroid-consultation",
         // Shopify will append ?key=xxx&return_to=... to invoice_url automatically
         // when customer completes payment, they'll be redirected to return_url
       },
