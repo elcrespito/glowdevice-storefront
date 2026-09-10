@@ -120,7 +120,8 @@ export function ProductPurchase({ product }: { product: NormalizedProduct }) {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <p className="text-xs leading-relaxed text-stone-500">
-        Secure payment processing via Shopify. You'll be redirected to complete checkout.
+        Secure payment processing via Shopify. You&apos;ll be redirected to
+        complete checkout.
       </p>
     </div>
   );

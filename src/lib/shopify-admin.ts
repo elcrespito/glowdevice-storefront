@@ -1,6 +1,5 @@
 import { signPayload, type HandoffPayload } from "./handoff";
 import {
-  STORE_BASE_URL,
   STORE_DOMAIN,
   STOREFRONT_PUBLIC_URL,
 } from "./config";
@@ -172,53 +171,6 @@ async function convertAmount(
     console.warn("[shopify-admin] FX convert failed, using 1:1", err);
   }
   return amount;
-}
-
-type GlowCatalogItem = { title: string; price: number };
-
-async function fetchGlowCatalog(): Promise<GlowCatalogItem[]> {
-  try {
-    const res = await fetch(`${STORE_BASE_URL}/products.json?limit=250`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      products?: Array<{
-        title: string;
-        variants?: Array<{ price: string }>;
-      }>;
-    };
-    return (data.products || [])
-      .map((p) => ({
-        title: p.title,
-        price: Number(p.variants?.[0]?.price || 0),
-      }))
-      .filter((p) => p.title && p.price > 0);
-  } catch {
-    return [];
-  }
-}
-
-function pickGlowTitle(
-  targetPrice: number,
-  catalog: GlowCatalogItem[],
-  usedTitles: Set<string>,
-): string {
-  if (!catalog.length) return "Beauty Device Kit";
-  const available = catalog.filter((c) => !usedTitles.has(c.title));
-  const pool = available.length ? available : catalog;
-  let best = pool[0];
-  let bestDist = Math.abs(best.price - targetPrice);
-  for (const item of pool) {
-    const dist = Math.abs(item.price - targetPrice);
-    if (dist < bestDist) {
-      best = item;
-      bestDist = dist;
-    }
-  }
-  usedTitles.add(best.title);
-  return best.title;
 }
 
 function money(n: number): string {

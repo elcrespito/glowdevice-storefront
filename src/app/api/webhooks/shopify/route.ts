@@ -3,6 +3,31 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 export const dynamic = "force-dynamic";
 
+type NoteAttribute = {
+  name: string;
+  value: string;
+};
+
+type ShopifyOrder = {
+  id?: number | string;
+  order_number?: number | string;
+  name?: string;
+  email?: string | null;
+  total_price?: string;
+  currency?: string;
+  financial_status?: string;
+  processed_at?: string;
+  note_attributes?: NoteAttribute[];
+};
+
+type ShopifyDraftOrder = {
+  id?: number | string;
+  status?: string;
+  completed_at?: string | null;
+  order_id?: number | string | null;
+  note_attributes?: NoteAttribute[];
+};
+
 /**
  * POST /api/webhooks/shopify
  * 
@@ -48,7 +73,7 @@ export async function POST(req: NextRequest) {
 
   console.info("[webhook] received", topic, "from", shop);
 
-  let data: any;
+  let data: unknown;
   try {
     data = JSON.parse(body);
   } catch (err) {
@@ -60,13 +85,13 @@ export async function POST(req: NextRequest) {
   try {
     switch (topic) {
       case "orders/paid":
-        await handleOrderPaid(data);
+        await handleOrderPaid(data as ShopifyOrder);
         break;
       case "draft_orders/update":
-        await handleDraftOrderUpdate(data);
+        await handleDraftOrderUpdate(data as ShopifyDraftOrder);
         break;
       case "orders/create":
-        await handleOrderCreate(data);
+        await handleOrderCreate(data as ShopifyOrder);
         break;
       default:
         console.warn("[webhook] unhandled topic:", topic);
@@ -79,7 +104,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-async function handleOrderPaid(order: any) {
+async function handleOrderPaid(order: ShopifyOrder) {
   console.info("[webhook/orders/paid]", {
     id: order.id,
     orderNumber: order.order_number || order.name,
@@ -92,10 +117,10 @@ async function handleOrderPaid(order: any) {
   // Extract internal order ID from note_attributes
   const noteAttributes = order.note_attributes || [];
   const internalOrderId = noteAttributes.find(
-    (attr: any) => attr.name === "internal_order_id"
+    (attr) => attr.name === "internal_order_id"
   )?.value;
   const returnUrl = noteAttributes.find(
-    (attr: any) => attr.name === "return_url"
+    (attr) => attr.name === "return_url"
   )?.value;
 
   if (internalOrderId) {
@@ -111,7 +136,7 @@ async function handleOrderPaid(order: any) {
   }
 }
 
-async function handleDraftOrderUpdate(draftOrder: any) {
+async function handleDraftOrderUpdate(draftOrder: ShopifyDraftOrder) {
   console.info("[webhook/draft_orders/update]", {
     id: draftOrder.id,
     status: draftOrder.status,
@@ -123,7 +148,7 @@ async function handleDraftOrderUpdate(draftOrder: any) {
   if (draftOrder.status === "completed" && draftOrder.order_id) {
     const noteAttributes = draftOrder.note_attributes || [];
     const internalOrderId = noteAttributes.find(
-      (attr: any) => attr.name === "internal_order_id"
+      (attr) => attr.name === "internal_order_id"
     )?.value;
 
     if (internalOrderId) {
@@ -137,7 +162,7 @@ async function handleDraftOrderUpdate(draftOrder: any) {
   }
 }
 
-async function handleOrderCreate(order: any) {
+async function handleOrderCreate(order: ShopifyOrder) {
   console.info("[webhook/orders/create]", {
     id: order.id,
     orderNumber: order.order_number || order.name,
@@ -145,7 +170,10 @@ async function handleOrderCreate(order: any) {
   });
 }
 
-async function notifyPeptidemy(internalOrderId: string, shopifyOrder: any) {
+async function notifyPeptidemy(
+  internalOrderId: string,
+  shopifyOrder: ShopifyOrder,
+) {
   const peptidemyWebhookUrl = process.env.PEPTIDEMY_WEBHOOK_URL;
   if (!peptidemyWebhookUrl) {
     console.warn(
